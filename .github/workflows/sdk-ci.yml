@@ -18,9 +18,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install ruff
-        run: pip install ruff
+        run: pip install ruff==0.15.6
       - name: Lint
-        run: ruff check .
+        run: ruff check . --config ruff.toml
 
   sdk-contracts:
     runs-on: ubuntu-latest

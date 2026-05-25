@@ -63,4 +63,4 @@ __all__ = [
     "ValidationError",
 ]
 
-__version__ = "1.0.0"
+from aindy_sdk._version import __version__ as __version__  # noqa: F401

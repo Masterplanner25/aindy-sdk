@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aindy-sdk"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Client SDK for the A.I.N.D.Y. runtime API"
 authors = [{ name = "Shawn Knight" }]
 readme = "README.md"
@@ -22,6 +22,9 @@ test = [
     "pytest==9.0.2",
     "pytest-cov==7.0.0",
 ]
+
+[tool.setuptools.dynamic]
+version = { attr = "aindy_sdk._version.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["."]

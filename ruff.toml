@@ -1,0 +1,25 @@
+line-length = 120
+target-version = "py311"
+exclude = [
+    ".venv/",
+    "venv/",
+    "dist/",
+]
+
+[lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E401",   # multiple-imports-on-one-line
+    "E501",   # line too long (handled by formatter)
+    "E402",   # module level import not at top
+    "E731",   # lambda-assignment
+    "F401",   # imported but unused
+    "F403",   # undefined-local-with-import-star
+    "F541",   # f-string-missing-placeholders
+    "F811",   # redefinition of unused name
+    "F821",   # undefined-name
+    "F841",   # unused-variable
+    "W291",   # trailing whitespace
+    "W292",   # missing-newline-at-end-of-file
+    "W293",   # whitespace before ':'
+]

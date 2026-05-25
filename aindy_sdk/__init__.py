@@ -47,9 +47,11 @@ from aindy_sdk.exceptions import (
     ServerError,
     ValidationError,
 )
+from aindy_sdk.sandbox import SandboxAPI
 
 __all__ = [
     "AINDYClient",
+    "SandboxAPI",
     # Exceptions
     "AINDYError",
     "AuthenticationError",

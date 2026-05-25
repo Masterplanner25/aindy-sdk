@@ -91,6 +91,7 @@ class TestClientConstruction(unittest.TestCase):
         self.assertIsNotNone(c.events)
         self.assertIsNotNone(c.execution)
         self.assertIsNotNone(c.nodus)
+        self.assertIsNotNone(c.sandbox)
 
     def test_default_timeout(self):
         c = _make_client()
@@ -500,6 +501,94 @@ class TestIntegrationPipeline(unittest.TestCase):
         write_payload = m.call_args_list[2][0][1]
         self.assertEqual(write_payload["content"], "Goals analyzed")
         self.assertEqual(write_payload["path"], "/memory/shawn/insights")
+
+
+# ── Group K: SandboxAPI ───────────────────────────────────────────────────────
+
+class TestSandboxAPI(unittest.TestCase):
+
+    def setUp(self):
+        self.client = _make_client()
+
+    def _sandbox_payload(
+        self,
+        assurance_class_satisfied: bool = True,
+        certification_tier_satisfied: bool = True,
+        trusted_python_present: bool = False,
+    ) -> dict:
+        return {
+            "plugin_sandbox_posture": {
+                "current": {
+                    "runner_type": "insecure_dev_subprocess",
+                    "assurance_class": "insecure-dev",
+                    "runtime_trust_status": "missing-reference",
+                    "certification_tier": "contained-process-certified",
+                    "certification_status": "certified",
+                },
+                "requirement_status": {
+                    "assurance_class_satisfied": assurance_class_satisfied,
+                    "certification_tier_satisfied": certification_tier_satisfied,
+                },
+            },
+            "plugin_sandbox_platform": {},
+            "sandbox_verification_posture": {
+                "verification_method": "runner-metadata-only",
+                "kernel_observable": False,
+                "assurance_ceiling": "container-process-boundary",
+            },
+            "trusted_python_execution": {
+                "present": trusted_python_present,
+                "total_count": 1 if trusted_python_present else 0,
+            },
+            "plugin_hosts": {},
+            "plugin_sandbox_attestation": {},
+            "runtime_conditions": [],
+        }
+
+    def test_posture_calls_health_sandbox(self):
+        payload = self._sandbox_payload()
+        with patch.object(self.client, "get", return_value=payload) as m:
+            result = self.client.sandbox.posture()
+        m.assert_called_once_with("/health/sandbox")
+        self.assertIn("plugin_sandbox_posture", result)
+
+    def test_requirements_satisfied_true_when_both_flags_true(self):
+        payload = self._sandbox_payload(assurance_class_satisfied=True, certification_tier_satisfied=True)
+        with patch.object(self.client.sandbox, "posture", return_value=payload):
+            self.assertTrue(self.client.sandbox.requirements_satisfied())
+
+    def test_requirements_satisfied_false_when_assurance_class_fails(self):
+        payload = self._sandbox_payload(assurance_class_satisfied=False, certification_tier_satisfied=True)
+        with patch.object(self.client.sandbox, "posture", return_value=payload):
+            self.assertFalse(self.client.sandbox.requirements_satisfied())
+
+    def test_requirements_satisfied_false_when_certification_tier_fails(self):
+        payload = self._sandbox_payload(assurance_class_satisfied=True, certification_tier_satisfied=False)
+        with patch.object(self.client.sandbox, "posture", return_value=payload):
+            self.assertFalse(self.client.sandbox.requirements_satisfied())
+
+    def test_requirements_satisfied_false_when_both_flags_false(self):
+        payload = self._sandbox_payload(assurance_class_satisfied=False, certification_tier_satisfied=False)
+        with patch.object(self.client.sandbox, "posture", return_value=payload):
+            self.assertFalse(self.client.sandbox.requirements_satisfied())
+
+    def test_requirements_satisfied_false_when_posture_missing(self):
+        with patch.object(self.client.sandbox, "posture", return_value={}):
+            self.assertFalse(self.client.sandbox.requirements_satisfied())
+
+    def test_trusted_python_present_false_when_no_extensions(self):
+        payload = self._sandbox_payload(trusted_python_present=False)
+        with patch.object(self.client.sandbox, "posture", return_value=payload):
+            self.assertFalse(self.client.sandbox.trusted_python_present())
+
+    def test_trusted_python_present_true_when_extensions_loaded(self):
+        payload = self._sandbox_payload(trusted_python_present=True)
+        with patch.object(self.client.sandbox, "posture", return_value=payload):
+            self.assertTrue(self.client.sandbox.trusted_python_present())
+
+    def test_trusted_python_present_false_when_field_missing(self):
+        with patch.object(self.client.sandbox, "posture", return_value={}):
+            self.assertFalse(self.client.sandbox.trusted_python_present())
 
 
 if __name__ == "__main__":

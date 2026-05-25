@@ -48,6 +48,7 @@ class AINDYClient:
         - ``client.events``    — event.emit
         - ``client.execution`` — execution.get
         - ``client.nodus``     — run_script / upload_script
+        - ``client.sandbox``   — posture / requirements_satisfied / trusted_python_present
     """
 
     def __init__(
@@ -67,6 +68,7 @@ class AINDYClient:
         from aindy_sdk.events import EventAPI
         from aindy_sdk.execution import ExecutionAPI
         from aindy_sdk.nodus import NodusAPI
+        from aindy_sdk.sandbox import SandboxAPI
 
         self.syscalls = Syscalls(self)
         self.memory = MemoryAPI(self.syscalls)
@@ -74,6 +76,7 @@ class AINDYClient:
         self.events = EventAPI(self.syscalls)
         self.execution = ExecutionAPI(self.syscalls)
         self.nodus = NodusAPI(self)
+        self.sandbox = SandboxAPI(self)
 
     # ── HTTP transport ────────────────────────────────────────────────────────
 

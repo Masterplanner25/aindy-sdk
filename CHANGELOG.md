@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+---
+
+## 1.0.0 — 2026-05-25
+
+Initial PyPI release. Universal interface SDK targeting both local-install
+(`aindy-runtime` on operator infrastructure) and cloud-hosted deployment
+contexts. Switching between local and cloud requires only a `base_url` change.
+Extracted as a standalone package from aindy-apps-monolith; stdlib-only,
+no runtime dependency on aindy-runtime internals.
+
 ### Changed — Universal interface role documented (2026-05-25)
 
 - **`README.md`**: Named `aindy-sdk` as the local+cloud bridge — the universal

@@ -58,7 +58,7 @@ class ValidationError(AINDYError):
 class ResourceLimitError(AINDYError):
     """Raised when a resource quota is exceeded (HTTP 429).
 
-    Typical cause: syscall_count or cpu_time_ms exceeded for the execution unit.
+    Typical cause: syscall_count or wall_time_ms exceeded for the execution unit.
     """
 
 

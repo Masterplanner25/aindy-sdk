@@ -4,7 +4,9 @@ A.I.N.D.Y. SDK quickstart example.
 Run against a local server:
 
     # 1. Start the backend
-    cd AINDY && uvicorn main:app --reload
+    cp AINDY/.env.example AINDY/.env  # edit with real values
+    docker compose up -d              # recommended (postgres + api)
+    # or: aindy-runtime serve         # manual / local dev
 
     # 2. Create a Platform API key (one-time)
     curl -s -X POST http://localhost:8000/platform/keys \

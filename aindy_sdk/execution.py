@@ -43,7 +43,7 @@ class ExecutionAPI:
 
             - ``status``        — ``"running"`` | ``"success"`` | ``"failed"`` | ``"waiting"``
             - ``syscall_count`` — total syscalls dispatched
-            - ``cpu_time_ms``   — accumulated CPU time
+            - ``wall_time_ms``  — accumulated wall-clock time (includes I/O wait)
             - ``priority``      — scheduling priority
             - ``quota_group``   — quota tier
 

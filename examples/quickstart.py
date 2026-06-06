@@ -8,18 +8,29 @@ Run against a local server:
     docker compose up -d              # recommended (postgres + api)
     # or: aindy-runtime serve         # manual / local dev
 
-    # 2. Create a Platform API key (one-time)
+    # 2. Register + get a JWT
+    curl -s -X POST http://localhost:8000/auth/register \
+      -H "Content-Type: application/json" \
+      -d '{"email": "you@example.com", "password": "yourpassword", "display_name": "You"}'
+
+    curl -s -X POST http://localhost:8000/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{"email": "you@example.com", "password": "yourpassword"}'
+
+    # 3. Create a Platform API key (one-time, save the 'key' field from the response)
     curl -s -X POST http://localhost:8000/platform/keys \
       -H "Authorization: Bearer <your-jwt>" \
       -H "Content-Type: application/json" \
       -d '{"name": "sdk-demo", "scopes": ["memory.read", "memory.write", "flow.run", "event.emit"]}' \
       | python -m json.tool
 
-    # 3. Run this example
-    API_KEY=aindy_... python sdk/examples/quickstart.py
+    # 4. Run this example
+    AINDY_API_KEY=aindy_... python examples/quickstart.py
 """
 import logging
 import os
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 from aindy_sdk import AINDYClient, AINDYError
 

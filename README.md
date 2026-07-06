@@ -353,4 +353,4 @@ See `examples/watcher_demo.py` for a dry-run demonstration.
 
 ## Status
 
-Beta. Part of the aindy-runtime 1.0.0 ecosystem.
+Beta. Part of the aindy-runtime 1.x ecosystem (verified against aindy-runtime 1.5.3).

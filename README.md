@@ -84,7 +84,7 @@ curl -s -X POST http://localhost:8000/platform/keys \
   -H "Content-Type: application/json" \
   -d '{
     "name": "my-app",
-    "scopes": ["memory.read", "memory.write", "flow.run", "event.emit"]
+    "scopes": ["memory.read", "memory.write", "flow.execute", "event.emit"]
   }' \
   | python -m json.tool
 ```
@@ -93,12 +93,12 @@ curl -s -X POST http://localhost:8000/platform/keys \
 
 | Scope | Grants access to |
 |---|---|
-| `memory.read` | Read and search memory nodes |
-| `memory.write` | Write and delete memory nodes |
-| `flow.run` | Trigger flow runs |
-| `event.emit` | Emit events to the event bus |
-| `syscall.*` | Full syscall registry access |
-| `execution.read` | Read execution unit status |
+| `memory.read` | Read and search memory nodes (`client.memory.read/search/list/tree/trace`) |
+| `memory.write` | Write and delete memory nodes (implies read) |
+| `flow.execute` | Run registered flows (`client.flow.run`) |
+| `event.emit` | Emit events to the event bus (`client.events.emit`) |
+| `execution.read` | Read execution unit status (`client.execution.get`) |
+| `platform.admin` | Full platform admin — bypasses all scope checks |
 
 ### 4. First call
 

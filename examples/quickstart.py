@@ -21,7 +21,7 @@ Run against a local server:
     curl -s -X POST http://localhost:8000/platform/keys \
       -H "Authorization: Bearer <your-jwt>" \
       -H "Content-Type: application/json" \
-      -d '{"name": "sdk-demo", "scopes": ["memory.read", "memory.write", "flow.run", "event.emit"]}' \
+      -d '{"name": "sdk-demo", "scopes": ["memory.read", "memory.write", "flow.execute", "event.emit"]}' \
       | python -m json.tool
 
     # 4. Run this example

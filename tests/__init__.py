@@ -301,7 +301,7 @@ class TestFlowAPI(unittest.TestCase):
             result = self.client.flow.run("analyze_entities", {"nodes": []})
         m.assert_called_once_with(
             "sys.v1.flow.run",
-            {"flow_name": "analyze_entities", "input": {"nodes": []}},
+            {"flow_name": "analyze_entities", "initial_state": {"nodes": []}},
         )
         self.assertEqual(result["data"]["summary"], "done")
 
@@ -310,7 +310,8 @@ class TestFlowAPI(unittest.TestCase):
         with patch.object(self.client.syscalls, "call", return_value=envelope) as m:
             self.client.flow.run("my_flow")
         payload = m.call_args[0][1]
-        self.assertEqual(payload["input"], {})
+        # Wire key is initial_state (the sys.v1.flow.run schema), not input.
+        self.assertEqual(payload["initial_state"], {})
 
 
 # ── Group F: EventAPI ─────────────────────────────────────────────────────────

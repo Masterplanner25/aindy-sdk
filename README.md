@@ -200,28 +200,14 @@ node_id = result["data"]["node"]["id"]
 
 # Semantic similarity search
 result = client.memory.search("recent project decisions", limit=5)
-
-# Delete a node
-client.memory.delete(node_id)
 ```
 
 ### Flow (`client.flow`)
 
 ```python
-# Trigger a flow run and get the result
+# Run a registered flow and get its result (synchronous)
 result = client.flow.run("analyze_entities", {"data": nodes})
-print(result["status"])    # "success" | "waiting" | "failed"
-
-# For long-running flows: trigger and poll
-result = client.flow.trigger("long_analysis", {"input": "..."})
-run_id = result["data"]["run_id"]
-
-import time
-while True:
-    status = client.execution.get(run_id)
-    if status["data"]["status"] not in ("running", "waiting"):
-        break
-    time.sleep(2)
+output = result["data"]
 ```
 
 ### Events (`client.events`)

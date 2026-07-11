@@ -45,6 +45,8 @@ class FlowAPI:
         Args:
             flow_name: Name of the registered flow to execute.
             input:     Initial state dict passed into the flow (default empty).
+                       Sent on the wire as ``initial_state`` — the key the
+                       ``sys.v1.flow.run`` syscall schema requires.
 
         Returns:
             Syscall envelope. ``result["data"]`` contains the flow's final output
@@ -55,7 +57,9 @@ class FlowAPI:
             result = client.flow.run("classify_memory", {"query": "sprint goals"})
             classification = result["data"]["classification"]
         """
+        # The runtime syscall reads ``initial_state`` (not ``input``); sending
+        # ``input`` here silently ran flows with empty state.
         return self._sys.call(
             "sys.v1.flow.run",
-            {"flow_name": flow_name, "input": input or {}},
+            {"flow_name": flow_name, "initial_state": input or {}},
         )

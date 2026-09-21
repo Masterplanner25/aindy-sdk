@@ -271,7 +271,7 @@ class TestMemoryAPI(unittest.TestCase):
         )
 
     def test_tree_calls_memory_tree(self):
-        envelope = _ok_response({"tree": {}, "flat": []})
+        envelope = _ok_response({"tree": {}, "node_count": 0, "path": "/memory/shawn/sprint"})
         with patch.object(self.client.syscalls, "call", return_value=envelope) as m:
             self.client.memory.tree("/memory/shawn/sprint")
         m.assert_called_once_with(
@@ -328,7 +328,7 @@ class TestEventAPI(unittest.TestCase):
             self.client.events.emit("entity.updated", {"entity_id": "42"})
         m.assert_called_once_with(
             "sys.v1.event.emit",
-            {"type": "entity.updated", "payload": {"entity_id": "42"}},
+            {"event_type": "entity.updated", "payload": {"entity_id": "42"}},
         )
 
     def test_emit_defaults_payload_to_empty_dict(self):
@@ -398,7 +398,7 @@ class TestNodusAPI(unittest.TestCase):
             result = self.client.nodus.upload_script("my_script", 'set_state("x", 1)')
         m.assert_called_once_with(
             "/platform/nodus/upload",
-            {"name": "my_script", "source": 'set_state("x", 1)', "overwrite": False},
+            {"name": "my_script", "content": 'set_state("x", 1)', "overwrite": False},
         )
         self.assertEqual(result["name"], "my_script")
 

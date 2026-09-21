@@ -92,6 +92,10 @@ class MemoryAPI:
 
         Returns:
             Syscall envelope. ``result["data"]["node"]`` is the created/updated node.
+
+        Note: ``extra`` is not declared by the ``sys.v1.memory.write`` schema; the runtime
+        merges it into the node rather than rejecting the unknown key (it does not set
+        ``additionalProperties: false``). It works by that absence, not by contract.
         """
         payload: dict[str, Any] = {
             "path": path,
@@ -160,8 +164,10 @@ class MemoryAPI:
             limit: Max nodes to include in tree (default 100).
 
         Returns:
-            Syscall envelope. ``result["data"]["tree"]`` is the nested dict;
-            ``result["data"]["flat"]`` is the depth-first ordered list.
+            Syscall envelope. ``result["data"]["tree"]`` is the nested dict,
+            ``result["data"]["node_count"]`` the number of nodes in it, ``result["data"]["path"]``
+            the prefix. There is no ``"flat"`` key — the 1.0.0 docstring promised one and no
+            runtime handler produces it; flatten client-side if you need depth-first order.
         """
         return self._sys.call("sys.v1.memory.tree", {"path": path, "limit": limit})
 

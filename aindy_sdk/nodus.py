@@ -115,9 +115,11 @@ class NodusAPI:
         Returns:
             ``{"name": str, "size_bytes": int, "created_at": str}``
         """
+        # ``NodusScriptUpload`` (the runtime's request model) names the script body ``content``;
+        # 1.0.0 sent ``source`` and 422'd on every call. The Python parameter keeps its name.
         return self._client.post(_NODUS_UPLOAD, {
             "name": name,
-            "source": source,
+            "content": source,
             "overwrite": overwrite,
         })
 

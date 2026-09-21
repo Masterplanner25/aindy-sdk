@@ -21,6 +21,10 @@ dependencies = []
 test = [
     "pytest==9.0.2",
     "pytest-cov==7.0.0",
+    # tests/test_wire_contract.py validates every payload the SDK sends against the runtime's
+    # OWN schemas (syscall input_schema, request models). Without this the SDK's tests can only
+    # pin what the SDK sends -- which is how three wrong shapes stayed green for months.
+    "aindy-runtime>=2.22.0",
 ]
 
 [tool.setuptools.dynamic]

@@ -57,7 +57,11 @@ class EventAPI:
                 {"path": "/memory/shawn/insights/**", "count": 42},
             )
         """
+        # The wire key is ``event_type`` — the syscall's ``required`` field. 1.0.0 sent ``type``
+        # and 422'd on every call against every runtime release; the SDK's own tests mocked the
+        # dispatcher and could not see it. ``tests/test_wire_contract.py`` now validates this
+        # payload against the runtime's schema.
         return self._sys.call(
             "sys.v1.event.emit",
-            {"type": event_type, "payload": payload or {}},
+            {"event_type": event_type, "payload": payload or {}},
         )

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added — the watcher can use your own key
+
+- **`AINDY_WATCHER_KEY`** holds a key you mint with `POST /watcher/keys`, and is sent as `X-Platform-Key`. It needs runtime 2.31.4 or later. That key acts only for you and works only on the watcher routes.
+- **`AINDY_API_KEY` still works** and is used when `AINDY_WATCHER_KEY` is unset. It is the deployment's shared secret and can act for any user, so keep it to services and don't install it on a user's machine.
+
 ## 1.0.1 — 2026-09-21
 
 ### Fixed — three wire mismatches the SDK's own tests could not see

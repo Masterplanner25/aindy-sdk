@@ -6,7 +6,10 @@ All settings are read from process environment variables.
 Environment variables:
   AINDY_WATCHER_API_URL           Required. Base URL of A.I.N.D.Y. API.
                                   e.g. http://localhost:8000
-  AINDY_API_KEY                   Required (unless DRY_RUN=true). API key.
+  AINDY_WATCHER_KEY               Your own key, from POST /watcher/keys. Use this on your machine.
+  AINDY_API_KEY                   The deployment's shared key, for a service. Used only when
+                                  AINDY_WATCHER_KEY is unset. One of the two is required
+                                  unless DRY_RUN=true.
   AINDY_WATCHER_POLL_INTERVAL     Seconds between window samples. Default: 5
   AINDY_WATCHER_FLUSH_INTERVAL    Seconds between signal flushes. Default: 10
   AINDY_WATCHER_BATCH_SIZE        Signals per POST batch. Default: 20
@@ -62,6 +65,7 @@ class WatcherConfig:
     heartbeat_interval: float
     dry_run: bool
     log_level: str
+    watcher_key: str = ""
 
 
 def load() -> WatcherConfig:
@@ -72,6 +76,7 @@ def load() -> WatcherConfig:
     """
     api_url = os.getenv("AINDY_WATCHER_API_URL", "http://localhost:8000").rstrip("/")
     api_key = os.getenv("AINDY_API_KEY", "")
+    watcher_key = os.getenv("AINDY_WATCHER_KEY", "")
 
     return WatcherConfig(
         api_url=api_url,
@@ -86,6 +91,7 @@ def load() -> WatcherConfig:
         heartbeat_interval=_env_float("AINDY_WATCHER_HEARTBEAT_INTERVAL", 300.0),
         dry_run=_env_bool("AINDY_WATCHER_DRY_RUN", default=False),
         log_level=os.getenv("AINDY_WATCHER_LOG_LEVEL", "INFO").upper(),
+        watcher_key=watcher_key,
     )
 
 
@@ -98,8 +104,8 @@ def validate(cfg: WatcherConfig) -> list[str]:
     if not cfg.api_url:
         errors.append("AINDY_WATCHER_API_URL is required")
 
-    if not cfg.dry_run and not cfg.api_key:
-        errors.append("AINDY_API_KEY is required when DRY_RUN is false")
+    if not cfg.dry_run and not (cfg.watcher_key or cfg.api_key):
+        errors.append("AINDY_WATCHER_KEY or AINDY_API_KEY is required when DRY_RUN is false")
 
     if cfg.poll_interval < 1.0:
         errors.append("AINDY_WATCHER_POLL_INTERVAL must be >= 1 second")

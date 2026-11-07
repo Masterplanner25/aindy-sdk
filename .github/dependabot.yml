@@ -1,0 +1,17 @@
+version: 2
+updates:
+  # The package has no runtime dependencies. This covers the test and build pins in pyproject.toml.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+
+  # Workflow actions are pinned by commit SHA, so they never move on their own.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5

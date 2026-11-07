@@ -49,10 +49,11 @@ curl http://localhost:8000/ready    # → {"status": "ok", ...}
 ### 2. Register and log in
 
 ```bash
-# Register
+# Register. Returns 202 with no token: registration does not log you in.
+# Passwords must be at least 8 characters.
 curl -s -X POST http://localhost:8000/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email": "you@example.com", "password": "yourpassword", "display_name": "You"}' \
+  -d '{"email": "you@example.com", "password": "yourpassword", "username": "you"}' \
   | python -m json.tool
 
 # Log in — copy the access_token from the response
@@ -62,11 +63,11 @@ curl -s -X POST http://localhost:8000/auth/login \
   | python -m json.tool
 ```
 
-To promote your account to admin (required to create API keys via the CLI):
+Promote your account to admin, which `POST /platform/keys` requires:
 
 ```bash
-# Using the CLI (no server restart needed)
-aindy-runtime auth promote-admin you@example.com
+# Using the CLI (no server restart needed). In a compose deployment it runs inside the container:
+docker compose exec api aindy-runtime auth promote-admin you@example.com
 
 # Or via env var (requires server restart)
 # Add AINDY_BOOTSTRAP_ADMIN_EMAIL=you@example.com to AINDY/.env, then docker compose restart api
@@ -89,16 +90,19 @@ curl -s -X POST http://localhost:8000/platform/keys \
   | python -m json.tool
 ```
 
-**Available scopes:**
+**The scopes this SDK's calls use:**
 
 | Scope | Grants access to |
 |---|---|
 | `memory.read` | Read and search memory nodes (`client.memory.read/search/list/tree/trace`) |
-| `memory.write` | Write and delete memory nodes (implies read) |
-| `flow.execute` | Run registered flows (`client.flow.run`) |
+| `memory.write` | Write memory nodes (`client.memory.write`). It also grants read, but not delete |
+| `flow.execute` | Run registered flows and Nodus scripts (`client.flow.run`, `client.nodus`) |
 | `event.emit` | Emit events to the event bus (`client.events.emit`) |
 | `execution.read` | Read execution unit status (`client.execution.get`) |
-| `platform.admin` | Full platform admin — bypasses all scope checks |
+| `platform.admin` | Full platform admin, which passes every scope check |
+
+The runtime's README has [the complete set](https://github.com/Masterplanner25/aindy-runtime#after-the-server-starts). An
+unknown scope is a `422`. Grant a key only what it needs.
 
 ### 4. First call
 
@@ -163,7 +167,7 @@ All capabilities are accessed through namespaces on `AINDYClient`:
 | Namespace | Description |
 |---|---|
 | `client.memory` | Read, write, and search memory nodes by MAS path or vector similarity |
-| `client.flow` | Trigger flow runs and poll their status |
+| `client.flow` | Run a registered flow and get its result |
 | `client.events` | Emit events to the runtime event bus |
 | `client.nodus` | Compile and execute Nodus scripts |
 | `client.syscalls` | List and inspect the syscall registry |
@@ -306,6 +310,18 @@ The SDK ships the A.I.N.D.Y. Watcher client process. The watcher runs on your
 machine, observes the active OS window, classifies your activity, and emits
 structured signals to the runtime for flow triggering and session tracking.
 
+First mint your own watcher key. Any signed-in user can, and it needs runtime 2.31.4 or later. The key is shown once,
+works only on the watcher's routes, and acts only for you:
+
+```bash
+curl -s -X POST http://localhost:8000/watcher/keys \
+  -H "Authorization: Bearer <your-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-laptop"}' \
+  | python -m json.tool
+# List your keys: GET /watcher/keys. Revoke one: DELETE /watcher/keys/{id}
+```
+
 ```bash
 # Start the watcher (requires AINDY_WATCHER_KEY and AINDY_WATCHER_API_URL)
 python -m aindy_sdk.watcher.watcher
@@ -340,4 +356,6 @@ See `examples/watcher_demo.py` for a dry-run demonstration.
 
 ## Status
 
-Beta. Part of the aindy-runtime 1.x ecosystem (verified against aindy-runtime 1.5.3).
+Beta. Every payload the SDK sends is checked in CI against the runtime's own schemas (`tests/test_wire_contract.py`, which installs the latest `aindy-runtime`). The watcher's own key needs runtime 2.31.4 or later.
+
+Security issues: see [`SECURITY.md`](SECURITY.md).

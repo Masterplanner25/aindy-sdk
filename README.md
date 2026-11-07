@@ -307,7 +307,7 @@ machine, observes the active OS window, classifies your activity, and emits
 structured signals to the runtime for flow triggering and session tracking.
 
 ```bash
-# Start the watcher (requires AINDY_API_KEY and AINDY_WATCHER_API_URL)
+# Start the watcher (requires AINDY_WATCHER_KEY and AINDY_WATCHER_API_URL)
 python -m aindy_sdk.watcher.watcher
 
 # Dry run — logs signals, no HTTP requests
@@ -322,7 +322,8 @@ Environment variables:
 | Variable | Default | Description |
 |---|---|---|
 | `AINDY_WATCHER_API_URL` | `http://localhost:8000` | Runtime base URL |
-| `AINDY_API_KEY` | _(required)_ | Service API key (`X-API-Key` header) |
+| `AINDY_WATCHER_KEY` | _(required on your machine)_ | Your own key from `POST /watcher/keys` (`X-Platform-Key` header). Needs runtime 2.31.4 or later |
+| `AINDY_API_KEY` | _(services only)_ | The deployment's shared key (`X-API-Key` header), used when `AINDY_WATCHER_KEY` is unset. It can act for any user, so don't install it on a user's machine |
 | `AINDY_WATCHER_DRY_RUN` | `false` | Log signals only, no HTTP POST |
 | `AINDY_WATCHER_POLL_INTERVAL` | `5` | Seconds between window samples |
 | `AINDY_WATCHER_FLUSH_INTERVAL` | `10` | Seconds between signal batch flushes |

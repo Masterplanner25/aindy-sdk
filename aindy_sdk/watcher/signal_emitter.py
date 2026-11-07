@@ -45,7 +45,9 @@ class SignalEmitter:
     api_url : str
         Full URL for POST /watcher/signals (e.g. http://localhost:8000/watcher/signals)
     api_key : str
-        Value for X-API-Key header.
+        The deployment's shared key, sent as X-API-Key. For a service.
+    watcher_key : str
+        A user's own key, sent as X-Platform-Key. Used instead of api_key when set.
     flush_interval : float
         Seconds between flush attempts.
     batch_size : int
@@ -64,9 +66,11 @@ class SignalEmitter:
         batch_size: int = _DEFAULT_BATCH_SIZE,
         max_queue: int = _DEFAULT_MAX_QUEUE,
         dry_run: bool = False,
+        watcher_key: str = "",
     ) -> None:
         self._api_url = api_url
         self._api_key = api_key
+        self._watcher_key = watcher_key
         self._flush_interval = flush_interval
         self._batch_size = batch_size
         self._max_queue = max_queue
@@ -166,7 +170,11 @@ class SignalEmitter:
         body = json.dumps({"signals": [asdict(e) for e in batch]}).encode()
         headers = {
             "Content-Type": "application/json",
-            "X-API-Key": self._api_key,
+            **(
+                {"X-Platform-Key": self._watcher_key}
+                if self._watcher_key
+                else {"X-API-Key": self._api_key}
+            ),
         }
         delay = _RETRY_BASE_DELAY
 

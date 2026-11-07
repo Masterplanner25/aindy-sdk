@@ -42,6 +42,7 @@ def _build_emitter(cfg: config.WatcherConfig) -> SignalEmitter:
     return SignalEmitter(
         api_url=cfg.signals_endpoint,
         api_key=cfg.api_key,
+        watcher_key=cfg.watcher_key,
         flush_interval=cfg.flush_interval,
         batch_size=cfg.batch_size,
         dry_run=cfg.dry_run,

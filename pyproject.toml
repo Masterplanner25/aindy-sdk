@@ -20,7 +20,7 @@ dependencies = []
 [project.optional-dependencies]
 test = [
     "pytest==9.0.3",
-    "pytest-cov==7.0.0",
+    "pytest-cov==7.1.0",
     # tests/test_wire_contract.py validates every payload the SDK sends against the runtime's
     # OWN schemas (syscall input_schema, request models). Without this the SDK's tests can only
     # pin what the SDK sends -- which is how three wrong shapes stayed green for months.

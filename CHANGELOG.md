@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+_Nothing yet._
+
+## 1.1.0 — 2026-11-07
+
 ### Added — the watcher can use your own key
 
 - **`AINDY_WATCHER_KEY`** holds a key you mint with `POST /watcher/keys`, and is sent as `X-Platform-Key`. It needs runtime 2.31.4 or later. That key acts only for you and works only on the watcher routes.

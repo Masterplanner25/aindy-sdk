@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+_Nothing yet._
+
+## 1.2.0 — 2026-11-10
+
 ### Added — the watcher ends a session when you walk away, and when it stops (FR-65)
 
 - **Idle detection.** With no keyboard or mouse input for `AINDY_WATCHER_IDLE_TIMEOUT` seconds (default 300; `0` turns it off), the session ends, at the last input. Before this, a session ended only on a lock screen, so a working day without a lock never sent `session_ended`, and the app's focus score never saw it. It reads `GetLastInputInfo` on Windows, `HIDIdleTime` on macOS, and `xprintidle` on Linux X11; where none is available the watcher says so at startup and behaves as before.

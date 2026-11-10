@@ -288,6 +288,17 @@ class AppRules:
 
 
 _DEFAULT_RULES = AppRules()
+#: The lists ``classify(window)`` uses when no ``rules`` is passed. The watcher installs the
+#: configured ones here at startup (``use_rules``) and keeps calling ``classify(window)`` with one
+#: argument: 1.x code replaces ``classifier.classify`` with a one-argument function, and the loop
+#: must keep working with it (1.2.0 passed ``rules`` and broke that).
+_active_rules = _DEFAULT_RULES
+
+
+def use_rules(rules: Optional[AppRules]) -> None:
+    """Make ``rules`` what ``classify(window)`` uses by default (None restores the built-ins)."""
+    global _active_rules
+    _active_rules = rules or _DEFAULT_RULES
 
 
 def apply_input_idle(
@@ -318,10 +329,10 @@ def classify(window: Optional[WindowInfo], rules: Optional[AppRules] = None) -> 
     """
     Classify the current activity from a WindowInfo snapshot.
 
-    Returns ClassificationResult with IDLE when window is None. ``rules`` defaults to the
-    built-in lists.
+    Returns ClassificationResult with IDLE when window is None. ``rules`` defaults to the lists
+    installed with ``use_rules`` (the built-ins unless the watcher configured others).
     """
-    rules = rules or _DEFAULT_RULES
+    rules = rules or _active_rules
     if window is None:
         return ClassificationResult(
             activity_type=ActivityType.IDLE,

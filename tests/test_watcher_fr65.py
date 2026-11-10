@@ -229,10 +229,42 @@ def test_the_loop_reads_input_idle_only_when_it_is_on(monkeypatch):
     cfg = config.load()
 
     cfg.idle_timeout = 300
-    assert watcher._sample(cfg, AppRules()).activity_type == ActivityType.IDLE
+    assert watcher._sample(cfg).activity_type == ActivityType.IDLE
     cfg.idle_timeout = 0
-    assert watcher._sample(cfg, AppRules()).activity_type == ActivityType.WORK
+    assert watcher._sample(cfg).activity_type == ActivityType.WORK
     assert len(reads) == 1
+
+
+def test_a_one_argument_classify_replacement_keeps_working(monkeypatch):
+    """1.x launchers replace `classifier.classify` with `def wrapped(window)` (the app's
+    `scripts/watcher.py` does, for idle detection). 1.2.0's loop called `classify(window, rules)`,
+    so every sample raised TypeError, the loop logged it, and no signal was ever sent."""
+    seen = []
+    original = classifier.classify
+
+    def one_arg(window):
+        seen.append(window.app_name)
+        return original(window)
+
+    monkeypatch.setattr(classifier, "classify", one_arg)
+    monkeypatch.setattr(watcher, "get_active_window", lambda: WindowInfo(app_name="code", window_title="x"))
+    cfg = config.load()
+    cfg.idle_timeout = 0
+
+    assert watcher._sample(cfg).activity_type == ActivityType.WORK
+    assert seen == ["code"]
+
+
+def test_the_configured_lists_reach_a_one_argument_classify(monkeypatch):
+    monkeypatch.setattr(watcher, "get_active_window", lambda: WindowInfo(app_name="spotify.exe", window_title=""))
+    cfg = config.load()
+    cfg.idle_timeout = 0
+    try:
+        classifier.use_rules(AppRules.from_env({"AINDY_WATCHER_WORK_APPS": "spotify"}))
+        assert watcher._sample(cfg).activity_type == ActivityType.WORK
+    finally:
+        classifier.use_rules(None)
+    assert watcher._sample(cfg).activity_type == ActivityType.DISTRACTION  # control: built-ins again
 
 
 def test_idle_detection_never_raises(monkeypatch):

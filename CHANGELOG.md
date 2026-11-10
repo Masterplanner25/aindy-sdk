@@ -4,6 +4,13 @@
 
 _Nothing yet._
 
+## 1.2.1 — 2026-11-10
+
+### Fixed — 1.2.0 sent no signals under a launcher that replaces `classifier.classify`
+
+- **1.2.0's loop called `classify(window, rules)`.** A launcher that replaces `classifier.classify` with a one-argument function (the A.I.N.D.Y. app's `scripts/watcher.py` does, to add idle detection) then raised `TypeError` on every sample. The loop logs a sample's error and carries on, so the watcher ran and sent nothing.
+- The loop calls `classifier.classify(window)` with one argument again, as in 1.1.0. The configured app lists reach `classify` through the new `classifier.use_rules()`, which the watcher calls once at startup. `classify(window, rules=...)` still works when called directly.
+
 ## 1.2.0 — 2026-11-10
 
 ### Added — the watcher ends a session when you walk away, and when it stops (FR-65)

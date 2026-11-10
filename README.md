@@ -324,13 +324,40 @@ curl -s -X POST http://localhost:8000/watcher/keys \
 
 ```bash
 # Start the watcher (requires AINDY_WATCHER_KEY and AINDY_WATCHER_API_URL)
-python -m aindy_sdk.watcher.watcher
+aindy-watcher
 
 # Dry run — logs signals, no HTTP requests
-python -m aindy_sdk.watcher.watcher --dry-run
+aindy-watcher --dry-run
 
 # Custom poll interval and verbose logging
-python -m aindy_sdk.watcher.watcher --poll-interval 10 --log-level DEBUG
+aindy-watcher --poll-interval 10 --log-level DEBUG
+
+# Without the script on PATH (1.2.0+), or on 1.1.0 and earlier: python -m aindy_sdk.watcher.watcher
+python -m aindy_sdk.watcher
+```
+
+**When a session ends** (1.2.0+). The `session_ended` signal says why in `metadata.end_reason`:
+
+- `input_idle`: no keyboard or mouse input for `AINDY_WATCHER_IDLE_TIMEOUT` seconds. The session
+  ends at the last input, so the idle stretch counts as neither duration nor focus. This works on
+  Windows and macOS, and on Linux under X11 with `xprintidle` installed; elsewhere the watcher logs
+  that it is unavailable at startup.
+- `idle`: a lock screen, the logon screen, a screensaver, or no window in front.
+- `stopped`: the watcher was stopped (Ctrl+C or SIGTERM). Closing its console window kills it
+  without a stop, so no signal is sent.
+
+`metadata.focused_seconds` is the time spent working between samples, and `focus_score` is that
+over `duration_seconds`. Before 1.2.0 both were inflated (see the changelog).
+
+**Your own app lists** (1.2.0+). Each of these is a comma-separated list of app (process) names,
+matched case-insensitively as a substring. A name you add is checked before every built-in list,
+so `AINDY_WATCHER_WORK_APPS=spotify` makes Spotify work. `-name` removes a built-in entry.
+
+```bash
+AINDY_WATCHER_WORK_APPS="blender, davinci, spotify"
+AINDY_WATCHER_DISTRACTION_APPS="-music"
+AINDY_WATCHER_DISTRACTION_TITLES="the onion, -reddit"   # window-title text, in a browser
+AINDY_WATCHER_BROWSER_APPS="librewolf"
 ```
 
 Environment variables:
@@ -348,9 +375,13 @@ Environment variables:
 | `AINDY_WATCHER_DISTRACTION_TIMEOUT` | `60` | Seconds of off-task time before distraction state |
 | `AINDY_WATCHER_RECOVERY_DELAY` | `30` | Seconds of focus to recover from distraction |
 | `AINDY_WATCHER_HEARTBEAT_INTERVAL` | `300` | Seconds between heartbeat signals |
+| `AINDY_WATCHER_IDLE_TIMEOUT` | `300` | Seconds without keyboard or mouse input before the session ends. `0` turns it off. 1.2.0+ |
+| `AINDY_WATCHER_WORK_APPS`, `_DISTRACTION_APPS`, `_COMMUNICATION_APPS`, `_IDLE_APPS`, `_BROWSER_APPS` | _(built-in lists)_ | Comma-separated app names; `-name` removes a built-in. 1.2.0+ |
+| `AINDY_WATCHER_DISTRACTION_TITLES` | _(built-in list)_ | Browser window-title text that marks a distraction; `-text` removes a built-in. 1.2.0+ |
 | `AINDY_WATCHER_LOG_LEVEL` | `INFO` | `DEBUG` \| `INFO` \| `WARNING` \| `ERROR` |
 
-See `examples/watcher_demo.py` for a dry-run demonstration.
+This repo's `examples/watcher_demo.py` is a dry-run demonstration. It is not in the installed
+package; `aindy-watcher --dry-run` does the same.
 
 ---
 

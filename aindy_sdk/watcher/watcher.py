@@ -2,14 +2,16 @@
 watcher.py — A.I.N.D.Y. Watcher main loop.
 
 Usage:
-    python -m aindy_sdk.watcher.watcher [--dry-run] [--poll-interval N] [--log-level LEVEL]
+    aindy-watcher [--dry-run] [--poll-interval N] [--log-level LEVEL]
+    python -m aindy_sdk.watcher [same options]
 
     --dry-run           Log signals instead of sending HTTP requests
     --poll-interval N   Override polling interval in seconds (default: 5)
     --log-level LEVEL   DEBUG|INFO|WARNING|ERROR (default: INFO)
 
 Signals:
-    SIGINT / SIGTERM → graceful shutdown (flushes remaining signals)
+    SIGINT / SIGTERM → graceful shutdown: ends an open session (session_ended,
+    end_reason "stopped"), then flushes remaining signals
 
 Environment:
     All settings can be configured via environment variables.
@@ -25,7 +27,8 @@ import signal
 import sys
 import time
 
-from aindy_sdk.watcher import classifier, config
+from aindy_sdk.watcher import classifier, config, idle_detector
+from aindy_sdk.watcher.classifier import AppRules, ClassificationResult
 from aindy_sdk.watcher.session_tracker import SessionTracker
 from aindy_sdk.watcher.signal_emitter import SignalEmitter
 from aindy_sdk.watcher.window_detector import get_active_window
@@ -58,6 +61,27 @@ def _build_tracker(cfg: config.WatcherConfig) -> SessionTracker:
     )
 
 
+def _sample(cfg: config.WatcherConfig, rules: AppRules) -> ClassificationResult:
+    """One sample: the active window, classified, then made IDLE after ``idle_timeout`` without input."""
+    result = classifier.classify(get_active_window(), rules)
+    if cfg.idle_timeout > 0:
+        result = classifier.apply_input_idle(result, idle_detector.seconds_since_input(), cfg.idle_timeout)
+    return result
+
+
+def _shutdown(tracker: SessionTracker, emitter: SignalEmitter, logger: logging.Logger) -> None:
+    """End an open session, then flush. Never raises: a stop must still drain the queue."""
+    try:
+        events = tracker.stop()
+        if events:
+            emitter.emit_many(events)
+            logger.info("Session %s ended on stop", events[0].session_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Could not end the open session on stop: %s", exc)
+    logger.info("Flushing remaining signals...")
+    emitter.stop(drain_timeout=10.0)
+
+
 def run(cfg: config.WatcherConfig) -> None:
     """
     Main sampling loop. Blocks until SIGINT/SIGTERM or KeyboardInterrupt.
@@ -65,6 +89,7 @@ def run(cfg: config.WatcherConfig) -> None:
     logger = logging.getLogger("watcher.main")
     emitter = _build_emitter(cfg)
     tracker = _build_tracker(cfg)
+    rules = AppRules.from_env()
 
     shutdown_requested = False
 
@@ -83,12 +108,20 @@ def run(cfg: config.WatcherConfig) -> None:
         cfg.dry_run,
         cfg.signals_endpoint,
     )
+    logger.info("App lists: %s", rules.counts())
+    if cfg.idle_timeout > 0:
+        reading = idle_detector.seconds_since_input()
+        if reading is None:
+            logger.warning(
+                "Idle detection is unavailable here; a session ends only on a lock screen or a stop."
+            )
+        else:
+            logger.info("Idle detection on: a session ends after %.0fs without input", cfg.idle_timeout)
 
     try:
         while not shutdown_requested:
             try:
-                window = get_active_window()
-                result = classifier.classify(window)
+                result = _sample(cfg, rules)
                 events = tracker.update(result)
                 if events:
                     emitter.emit_many(events)
@@ -108,8 +141,7 @@ def run(cfg: config.WatcherConfig) -> None:
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt received, shutting down")
     finally:
-        logger.info("Flushing remaining signals...")
-        emitter.stop(drain_timeout=10.0)
+        _shutdown(tracker, emitter, logger)
         logger.info("A.I.N.D.Y. Watcher stopped.")
 
 

@@ -2,7 +2,18 @@
 
 ## Unreleased
 
-_Nothing yet._
+### Added — the watcher ends a session when you walk away, and when it stops (FR-65)
+
+- **Idle detection.** With no keyboard or mouse input for `AINDY_WATCHER_IDLE_TIMEOUT` seconds (default 300; `0` turns it off), the session ends, at the last input. Before this, a session ended only on a lock screen, so a working day without a lock never sent `session_ended`, and the app's focus score never saw it. It reads `GetLastInputInfo` on Windows, `HIDIdleTime` on macOS, and `xprintidle` on Linux X11; where none is available the watcher says so at startup and behaves as before.
+- **`session_ended` on a clean stop.** Ctrl+C or SIGTERM now ends an open session before the final flush. Before this, stopping the watcher dropped the session.
+- **`metadata.end_reason`** on `session_ended`: `input_idle`, `idle` (lock screen or no window) or `stopped`. The existing keys are unchanged.
+- **Your own app lists**: `AINDY_WATCHER_WORK_APPS`, `_DISTRACTION_APPS`, `_COMMUNICATION_APPS`, `_IDLE_APPS`, `_BROWSER_APPS` and `AINDY_WATCHER_DISTRACTION_TITLES`. A name you add is checked before the built-in lists; `-name` removes a built-in. `classify()` takes an optional `rules=` (`AppRules`); called without it, it behaves as before.
+- **An `aindy-watcher` console script**, and `python -m aindy_sdk.watcher`. The old `python -m aindy_sdk.watcher.watcher` still works.
+
+### Fixed — the watcher's focus numbers were wrong
+
+- **`focused_seconds` and `focus_score` were inflated.** Each poll added the whole time since the session entered WORKING, not the time since the previous poll, so ten minutes of work at the default 5-second poll was recorded as about 605 minutes focused, a focus score of about 60. Each poll now adds only the interval since the previous one. Scores from 1.1.0 and earlier are not comparable with these.
+- **A distraction fired too early.** The distraction timeout was compared with how long the session had been WORKING, not with how long the distraction had lasted, so after a minute of work a single sample of a distracting app sent `distraction_detected` at once. It is now timed from the distraction's first sample.
 
 ## 1.1.0 — 2026-11-07
 

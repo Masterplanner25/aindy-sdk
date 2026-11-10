@@ -17,6 +17,9 @@ classifiers = [
 ]
 dependencies = []
 
+[project.scripts]
+aindy-watcher = "aindy_sdk.watcher.watcher:main"
+
 [project.optional-dependencies]
 test = [
     "pytest==9.2.0",

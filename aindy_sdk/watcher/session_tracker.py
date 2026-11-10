@@ -13,15 +13,24 @@ State machine:
 
 Contract:
   - Pure state machine — no external service calls, no DB, no HTTP
-  - All emitted events are returned as a list from update()
+  - All emitted events are returned as a list from update() and stop()
   - Caller is responsible for forwarding events to signal_emitter
+
+Time accounting (FR-65):
+  - Focus time is the time BETWEEN samples spent working, credited one interval per sample.
+    (1.x before 1.2.0 added the whole time since entering WORKING on every poll, so a
+    session's focused_seconds and focus_score were inflated.)
+  - A distraction is timed from its own first sample, not from when WORKING began.
+  - A session that ends on input idle ends at the last input: duration and focus stop there.
+  - session_ended carries ``end_reason``: ``idle`` (lock screen, no window), ``input_idle``
+    (no keyboard or mouse for the threshold) or ``stopped`` (the watcher stopped).
 """
 
 from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import List, Optional
 
@@ -88,6 +97,12 @@ class SessionTracker:
         self._total_seconds: float = 0.0           # total session time
         self._last_heartbeat: Optional[datetime] = None
         self._last_result: Optional[ClassificationResult] = None
+        self._last_update: Optional[datetime] = None        # when the previous sample came
+        self._since_last: float = 0.0                       # seconds since that sample
+        self._distraction_since: Optional[datetime] = None  # first distraction sample in WORKING
+        # Focus credited this session, as (start, end) intervals, so a session ending at the
+        # last input can drop what was credited after it.
+        self._focus_spans: List[tuple] = []
 
     # ------------------------------------------------------------------
     # Public API
@@ -117,6 +132,10 @@ class SessionTracker:
 
         events: List[SessionEvent] = []
         elapsed_in_state = (now - self._state_since).total_seconds()
+        self._since_last = (
+            max(0.0, (now - self._last_update).total_seconds()) if self._last_update else 0.0
+        )
+        self._last_update = now
 
         # --- Context switch detection (same session, different category) ---
         context_switch_event = self._check_context_switch(result, now)
@@ -144,6 +163,22 @@ class SessionTracker:
         self._last_result = result
         return events
 
+    def stop(self, now: Optional[datetime] = None) -> List[SessionEvent]:
+        """The watcher is stopping: end an open session (``end_reason: stopped``).
+
+        Returns ``[session_ended]`` when a session was open, else ``[]``. The tracker is IDLE
+        afterwards. The event names the last app sampled.
+        """
+        if now is None:
+            now = _now_utc()
+        last = self._last_result or ClassificationResult(
+            activity_type=ActivityType.IDLE, confidence=1.0, matched_rule="stopped",
+            app_name="", window_title="",
+        )
+        events = self._close_session(last, now, reason="stopped")
+        self._transition_to(SessionState.IDLE, now)
+        return events
+
     # ------------------------------------------------------------------
     # State handlers
     # ------------------------------------------------------------------
@@ -168,6 +203,7 @@ class SessionTracker:
             self._session_start = now
             self._focused_seconds = 0.0
             self._total_seconds = 0.0
+            self._focus_spans = []
             self._last_heartbeat = now
             self._transition_to(SessionState.WORKING, now)
             return [self._make_event("session_started", result, now)]
@@ -183,24 +219,30 @@ class SessionTracker:
             self._transition_to(SessionState.IDLE, now)
             return events
 
+        self._total_seconds += self._since_last
         if result.activity_type in (ActivityType.DISTRACTION, ActivityType.COMMUNICATION):
-            if elapsed >= self._distraction_timeout:
+            if self._distraction_since is None:
+                self._distraction_since = now
+            distracted = (now - self._distraction_since).total_seconds()
+            if distracted >= self._distraction_timeout:
                 events.append(
                     self._make_event(
                         "distraction_detected",
                         result,
                         now,
                         metadata={
-                            "elapsed_distracted_seconds": round(elapsed, 1),
+                            "elapsed_distracted_seconds": round(distracted, 1),
                             "distraction_category": result.matched_rule,
                         },
                     )
                 )
                 self._transition_to(SessionState.DISTRACTED, now)
         else:
-            # Active work — accumulate focus time
-            self._focused_seconds += elapsed
-            self._total_seconds += elapsed
+            # Active work: credit the interval since the previous sample, once.
+            self._distraction_since = None
+            if self._since_last > 0:
+                self._focused_seconds += self._since_last
+                self._focus_spans.append((now.timestamp() - self._since_last, now.timestamp()))
 
         return events
 
@@ -253,30 +295,42 @@ class SessionTracker:
     def _transition_to(self, new_state: SessionState, now: datetime) -> None:
         self._state = new_state
         self._state_since = now
+        self._distraction_since = None
+
+    def _focused_until(self, end: float) -> float:
+        """Focus credited at or before ``end`` (a POSIX timestamp)."""
+        return sum(max(0.0, min(stop, end) - start) for start, stop in self._focus_spans)
 
     def _close_session(
-        self, result: ClassificationResult, now: datetime
+        self, result: ClassificationResult, now: datetime, reason: Optional[str] = None
     ) -> List[SessionEvent]:
         if not self._session_id or self._session_start is None:
             return []
-        duration = (now - self._session_start).total_seconds()
-        focus_score = (
-            round(self._focused_seconds / duration, 3) if duration > 0 else 0.0
-        )
+        if reason is None:
+            reason = "input_idle" if result.matched_rule == "input_idle" else "idle"
+        end = now
+        if reason == "input_idle" and result.idle_seconds:
+            # The session ended at the last input, not when the threshold noticed it.
+            end = max(self._session_start, now - timedelta(seconds=result.idle_seconds))
+        duration = (end - self._session_start).total_seconds()
+        focused = min(self._focused_until(end.timestamp()), duration)
+        focus_score = round(focused / duration, 3) if duration > 0 else 0.0
         event = self._make_event(
             "session_ended",
             result,
-            now,
+            end,
             metadata={
                 "duration_seconds": round(duration, 1),
-                "focused_seconds": round(self._focused_seconds, 1),
+                "focused_seconds": round(focused, 1),
                 "focus_score": focus_score,
+                "end_reason": reason,
             },
         )
         self._session_id = ""
         self._session_start = None
         self._focused_seconds = 0.0
         self._total_seconds = 0.0
+        self._focus_spans = []
         return [event]
 
     def _check_context_switch(

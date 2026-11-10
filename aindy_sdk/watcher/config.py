@@ -17,6 +17,12 @@ Environment variables:
   AINDY_WATCHER_DISTRACTION_TIMEOUT Seconds of distraction before state change. Default: 60
   AINDY_WATCHER_RECOVERY_DELAY    Seconds of work before recovery confirmed. Default: 30
   AINDY_WATCHER_HEARTBEAT_INTERVAL Seconds between heartbeat signals. Default: 300
+  AINDY_WATCHER_IDLE_TIMEOUT      Seconds without keyboard or mouse input before the session
+                                  ends (at the last input). 0 turns it off. Default: 300
+  AINDY_WATCHER_WORK_APPS, _DISTRACTION_APPS, _COMMUNICATION_APPS, _IDLE_APPS, _BROWSER_APPS,
+  AINDY_WATCHER_DISTRACTION_TITLES
+                                  Comma-separated; a name is added and checked first, `-name`
+                                  removes a built-in. See classifier.AppRules.from_env.
   AINDY_WATCHER_DRY_RUN           true/1/yes → log signals, do not POST. Default: false
   AINDY_WATCHER_LOG_LEVEL         DEBUG|INFO|WARNING|ERROR. Default: INFO
 """
@@ -66,6 +72,7 @@ class WatcherConfig:
     dry_run: bool
     log_level: str
     watcher_key: str = ""
+    idle_timeout: float = 300.0
 
 
 def load() -> WatcherConfig:
@@ -92,6 +99,7 @@ def load() -> WatcherConfig:
         dry_run=_env_bool("AINDY_WATCHER_DRY_RUN", default=False),
         log_level=os.getenv("AINDY_WATCHER_LOG_LEVEL", "INFO").upper(),
         watcher_key=watcher_key,
+        idle_timeout=_env_float("AINDY_WATCHER_IDLE_TIMEOUT", 300.0),
     )
 
 
@@ -118,5 +126,8 @@ def validate(cfg: WatcherConfig) -> list[str]:
 
     if cfg.distraction_timeout < 0:
         errors.append("AINDY_WATCHER_DISTRACTION_TIMEOUT must be >= 0")
+
+    if cfg.idle_timeout < 0:
+        errors.append("AINDY_WATCHER_IDLE_TIMEOUT must be >= 0 (0 turns idle detection off)")
 
     return errors

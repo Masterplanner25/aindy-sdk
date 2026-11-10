@@ -61,9 +61,14 @@ def _build_tracker(cfg: config.WatcherConfig) -> SessionTracker:
     )
 
 
-def _sample(cfg: config.WatcherConfig, rules: AppRules) -> ClassificationResult:
-    """One sample: the active window, classified, then made IDLE after ``idle_timeout`` without input."""
-    result = classifier.classify(get_active_window(), rules)
+def _sample(cfg: config.WatcherConfig) -> ClassificationResult:
+    """One sample: the active window, classified, then made IDLE after ``idle_timeout`` without input.
+
+    Calls ``classifier.classify(window)`` with ONE argument, through the module attribute, so code
+    that replaces ``classifier.classify`` (as 1.x launchers do) keeps working. The configured app
+    lists reach it through ``classifier.use_rules``.
+    """
+    result = classifier.classify(get_active_window())
     if cfg.idle_timeout > 0:
         result = classifier.apply_input_idle(result, idle_detector.seconds_since_input(), cfg.idle_timeout)
     return result
@@ -90,6 +95,7 @@ def run(cfg: config.WatcherConfig) -> None:
     emitter = _build_emitter(cfg)
     tracker = _build_tracker(cfg)
     rules = AppRules.from_env()
+    classifier.use_rules(rules)
 
     shutdown_requested = False
 
@@ -121,7 +127,7 @@ def run(cfg: config.WatcherConfig) -> None:
     try:
         while not shutdown_requested:
             try:
-                result = _sample(cfg, rules)
+                result = _sample(cfg)
                 events = tracker.update(result)
                 if events:
                     emitter.emit_many(events)
